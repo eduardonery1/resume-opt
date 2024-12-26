@@ -1,8 +1,10 @@
 
+import Optimizer from "./pages/Optimizer";
+
 function App() {
   return (
     <div className="App">
-    Hello Optimizer
+      <Optimizer/>
     </div>
   );
 }

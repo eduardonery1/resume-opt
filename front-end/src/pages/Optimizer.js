@@ -1,9 +1,10 @@
 import React from "react"
+import OptimizerView from "./OptimizerView"
+import { handleUserDataSubmit } from "../models/resumeAPI"
 
 export default function Optimizer(){
+
     return (
-        <main>
-            Hello Optimizer
-        </main>
+        <OptimizerView {...{handleUserDataSubmit,}}/>
     )
 }
