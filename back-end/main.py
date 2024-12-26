@@ -3,13 +3,21 @@ from io import BytesIO
 from pydantic import BaseModel
 from PyPDF2 import PdfReader
 from producer import connect 
+from collections import defaultdict
 import google.generativeai as genai
 import json
-import pika
+import uuid 
 
+user_data = defaultdict(list)
 app = FastAPI()
 
-@app.post("/v1/resume-information")
+@app.get("auth/")
+def get_auth(request):
+    token = str(uuid.uuid4())
+    user_data[token].append({"order": len(user_data)})
+    return token
+
+@app.post("resume-information/")
 async def extract_resume_information(resume: UploadFile = File(...)):
     try:
         contents = await resume.read()
