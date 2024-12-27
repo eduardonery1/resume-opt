@@ -26,27 +26,28 @@ app = FastAPI()
 def get_auth():
     token = str(uuid.uuid4())
     user_data[token].append({"order": len(user_data)})
-    return token, status.HTTP_200_OK
+    return {"auth": token}, status.HTTP_200_OK
 
 @app.post("/resume-information")
 async def get_resume_information(resume: UploadFile = File(...), token: str = ""):
     try:
-        try:
-            assert token in user_data
-        except AssertionError as e:
-            return {"Invalid token."}, status.HTTP_400_BAD_REQUEST
+        if token not in user_data:
+            return {"error": "Invalid token."}, status.HTTP_400_BAD_REQUEST
 
         try:
             contents = await resume.read()
             reader = PdfReader(BytesIO(contents))
         except IOError as e:
-            return {"Invalid PDF File."}, status.HTTP_400_BAD_REQUEST
+            return {"error": "Invalid PDF File."}, status.HTTP_400_BAD_REQUEST
         
         try:
             pages = [ page.extract_text() for page in reader.pages ]
             text = "".join(pages)
-            await publish(str({"task": "extract_information", "resume_text": text, "priority": user_data[token][0]["order"]}), "task-queue") 
-            return {"Request queued."}, status.HTTP_200_OK
+            await publish(str({"task": "extract_information", 
+                               "resume_text": text, 
+                               "priority": user_data[token][0]["order"]})
+                            , "task-queue") 
+            return {"text": "Request queued."}, status.HTTP_200_OK
         except IOError as e:
             logging.debug("RabbitMQ error.")
             return status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -54,8 +55,6 @@ async def get_resume_information(resume: UploadFile = File(...), token: str = ""
     except Exception as e:
         logging.debug("Unknow error:", e)
         return status.HTTP_500_INTERNAL_SERVER_ERROR
-
-
 
 
 
