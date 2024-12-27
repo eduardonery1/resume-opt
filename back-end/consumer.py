@@ -1,17 +1,18 @@
 import os
+from dotenv import load_dotenv
 import json
-from db import db
 import asyncio
 from aio_pika import connect, IncomingMessage
 import json
 
+load_dotenv()
 
 user = os.environ["RABBITMQ_USER"]
-password  = os.environ["RABBITMQ_password"]
+password  = os.environ["RABBITMQ_PASS"]
 host = os.environ["RABBITMQ_HOST"]
 port = os.environ["RABBITMQ_PORT"]
 
-queue_name= "apiGateAway"
+queue_name= "task-queue"
 
 url = f'amqp://{user}:{password}@{host}:{port}/%2F'
 
@@ -21,9 +22,6 @@ async def callback(message: IncomingMessage):
     txt = message.body.decode("utf-8")
     data = json.loads(txt)
     print(data)
-    await db["preds"].insert_one(data)
-    print(f'|+| saved new pollution {data}')
-
 
 async def main(loop):
     connection = await connect(url, loop = loop)

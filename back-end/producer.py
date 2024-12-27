@@ -1,16 +1,17 @@
 import asyncio
 import logging
-
 import aio_pika
+
+
+logging.basicConfig(level=logging.DEBUG)
 
 async def connect() -> None:
     connection = await aio_pika.connect_robust(
-        "amqp://guest:guest@127.0.0.1/",
+        "amqp://guest:guest@localhost/",
     )
     return connection
 
-async def publisher(message: str, route_key: str) -> None:
-    logging.basicConfig(level=logging.DEBUG)
+async def publish(message: str, route_key: str) -> None:
     conn = await connect()
 
     async with conn:
