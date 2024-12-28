@@ -47,9 +47,10 @@ async def get_resume_information(resume: UploadFile = File(...), token: str = ""
         try:
             pages = [ page.extract_text() for page in reader.pages ]
             text = "".join(pages)
-            t_queue.publish(str({"task": "extract_information", 
-                               "resume_text": text, 
-                               "priority": user_data[token][0]["order"]})
+            t_queue.publish(json.dumps({"task": "resume-information", 
+                               "text": text.replace('"', "'"),
+                               "structured": True,
+                               "priority": user_data[token][0]["order"]}) 
                             ) 
             return {"text": "Request queued."}, status.HTTP_200_OK
         except IOError as e:

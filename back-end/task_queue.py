@@ -13,6 +13,7 @@ class TaskQueue(ABC):
     def consume(callback: Callable) -> None:
         raise NotImplementedError
 
+
 class GooglePubSub(TaskQueue):
     @staticmethod
     def publish(message: str) -> None:
