@@ -1,16 +1,14 @@
 from fastapi import FastAPI, UploadFile, File, status, Response
 from io import BytesIO
-from pydantic import BaseModel
 from PyPDF2 import PdfReader
-from producer import publish
 from collections import defaultdict
-from sys import argv
+from sys import argv, exit
 from dotenv import load_dotenv
-import google.generativeai as genai
 import os
 import logging
 import json
 import uuid 
+import queue
 
 
 load_dotenv()
@@ -19,6 +17,12 @@ logging.basicConfig(level=logging.DEBUG)
 
 if len(argv) > 1 and argv[1] == "debug":
     user_data[os.environ["DEBUG_TOKEN"]].append({"order": 0})
+
+try:
+    task_queue = queue.queue_register[os.environ["SELECTED_QUEUE_SERVICE"]]
+except IndexError as e:
+    logging.debug("SELECTED_QUEUE_SERVICE IS INVALID! EXITING...")
+    exit()
 
 app = FastAPI()
 
@@ -43,17 +47,17 @@ async def get_resume_information(resume: UploadFile = File(...), token: str = ""
         try:
             pages = [ page.extract_text() for page in reader.pages ]
             text = "".join(pages)
-            await publish(str({"task": "extract_information", 
+            task_queue.publish(str({"task": "extract_information", 
                                "resume_text": text, 
                                "priority": user_data[token][0]["order"]})
                             , "task-queue") 
             return {"text": "Request queued."}, status.HTTP_200_OK
         except IOError as e:
-            logging.debug("RabbitMQ error.")
+            logging.debug("Queue service error.")
             return status.HTTP_500_INTERNAL_SERVER_ERROR
 
     except Exception as e:
-        logging.debug("Unknow error:", e)
+        logging.debug("Unexpected error occured:", e)
         return status.HTTP_500_INTERNAL_SERVER_ERROR
 
 
