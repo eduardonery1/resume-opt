@@ -8,7 +8,7 @@ import os
 import logging
 import json
 import uuid 
-import queue
+import task_queue
 
 
 load_dotenv()
@@ -19,7 +19,7 @@ if len(argv) > 1 and argv[1] == "debug":
     user_data[os.environ["DEBUG_TOKEN"]].append({"order": 0})
 
 try:
-    task_queue = queue.queue_register[os.environ["SELECTED_QUEUE_SERVICE"]]
+    t_queue = task_queue.queue_register[os.environ["SELECTED_QUEUE_SERVICE"]]
 except IndexError as e:
     logging.debug("SELECTED_QUEUE_SERVICE IS INVALID! EXITING...")
     exit()
@@ -47,10 +47,10 @@ async def get_resume_information(resume: UploadFile = File(...), token: str = ""
         try:
             pages = [ page.extract_text() for page in reader.pages ]
             text = "".join(pages)
-            task_queue.publish(str({"task": "extract_information", 
+            t_queue.publish(str({"task": "extract_information", 
                                "resume_text": text, 
                                "priority": user_data[token][0]["order"]})
-                            , "task-queue") 
+                            ) 
             return {"text": "Request queued."}, status.HTTP_200_OK
         except IOError as e:
             logging.debug("Queue service error.")

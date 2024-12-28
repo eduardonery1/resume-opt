@@ -1,11 +1,12 @@
-from queue import TaskQueue
-from services import Service
+from task_queue import TaskQueue, queue_register
 from tasks import task_factory
+from functools import partial
+from dotenv import load_dotenv
+import os
 
-class TaskHandler:
-    def __init__(self, queue: TaskQueue, tasks_state, task_executor: Service) -> None:
-        self.tasks_state = tasks_state
-        self.queue = queue
+load_dotenv()
 
-    async def consume(self):
-        await self.queue.consume(lambda queue: task_factory())
+
+if __name__=="__main__":
+    queue = queue_register[os.environ["SELECTED_QUEUE_SERVICE"]]
+    queue.consume(partial(task_factory, queue=queue))

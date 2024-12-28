@@ -1,6 +1,7 @@
 from abc import ABC, abstractstaticmethod
 from typing import Callable
 from google.cloud import pubsub_v1
+import os
 
 
 class TaskQueue(ABC):
@@ -9,7 +10,7 @@ class TaskQueue(ABC):
         raise NotImplementedError
 
     @abstractstaticmethod
-    async def consume(callback: Callable) -> None:
+    def consume(callback: Callable) -> None:
         raise NotImplementedError
 
 class GooglePubSub(TaskQueue):
@@ -24,7 +25,7 @@ class GooglePubSub(TaskQueue):
         future.result()
     
     @staticmethod
-    async def consume(callback) -> None:
+    def consume(callback) -> None:
         topic_name = 'projects/{project_id}/topics/{topic}'.format(
             project_id=os.getenv('GOOGLE_CLOUD_PROJECT'),
             topic=os.getenv('GOOGLE_CLOUD_TOPIC'),
@@ -35,9 +36,9 @@ class GooglePubSub(TaskQueue):
             sub=os.getenv('GOOGLE_CLOUD_SUB'),  
             )
 
-        async with pubsub_v1.SubscriberClient() as subscriber:
+        with pubsub_v1.SubscriberClient() as subscriber:
             future = subscriber.subscribe(subscription_name, callback)
-            await future.result() 
+            future.result() 
 
 
 queue_register = {"GCP": GooglePubSub}
