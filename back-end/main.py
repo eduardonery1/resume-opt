@@ -15,12 +15,12 @@ load_dotenv()
 user_data = defaultdict(list)
 logging.basicConfig(level=logging.DEBUG)
 
-if len(argv) > 1 and argv[1] == "debug":
+if bool(os.environ["DEBUG"]):
     user_data[os.environ["DEBUG_TOKEN"]].append({"order": 0})
 
 try:
     t_queue = task_queue.queue_register[os.environ["SELECTED_QUEUE_SERVICE"]]
-except IndexError as e:
+except KeyError as e:
     logging.debug("SELECTED_QUEUE_SERVICE IS INVALID! EXITING...")
     exit()
 
@@ -49,16 +49,18 @@ async def get_resume_information(resume: UploadFile = File(...), token: str = ""
             text = "".join(pages)
             t_queue.publish(json.dumps({"task": "resume-information", 
                                "params": text.replace('"', "'"),
+                               "config": {"storage": "upstash_redis"},
+                               "auth": token,
                                "structured": True,
                                "priority": user_data[token][0]["order"]}) 
                             ) 
             return {"text": "Request queued."}, status.HTTP_200_OK
         except IOError as e:
-            logging.debug("Queue service error.")
+            logging.exception("Queue service error:", str(e))
             return status.HTTP_500_INTERNAL_SERVER_ERROR
 
     except Exception as e:
-        logging.debug("Unexpected error occured:", e)
+        logging.exception("Unexpected error occured:", str(e))
         return status.HTTP_500_INTERNAL_SERVER_ERROR
 
 

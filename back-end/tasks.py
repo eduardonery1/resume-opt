@@ -1,6 +1,7 @@
 import json
 import logging
 from pydantic import BaseModel, ValidationError
+from upstash_redis.asyncio import Redis
 from services import TaskExecutor
 from task_queue import TaskQueue
 
@@ -8,7 +9,18 @@ from task_queue import TaskQueue
 class Task(BaseModel):
     prompt: str
     params: list[str]
-    config: dict[str, str] = {}
+    config: dict[str, ...] = {}
+
+    def to_prompt(self) -> str:
+        return self.prompt
+
+    def store(self, data: bytes) -> None:
+        if not ("storage" in self.config and self.config["storage"] != "upstash_redis"):
+            raise Exception("Invalid storage option:", self.config["storage"])
+        
+
+
+
 
 
 class GenerateResumeJSON(Task):
@@ -56,7 +68,7 @@ def task_factory(message: str, services: list[TaskExecutor], queue: TaskQueue) -
             logging.error("No available services.") 
             return 
 
-        task_executor.run_task(task)
+        task_executor.run_task(task) #perhaps putting this part in message_handler using a observer is better.
         message.ack()
     except Exception as e:
         logging.exception("An unexpected error occured:", str(e))

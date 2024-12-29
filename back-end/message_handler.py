@@ -4,6 +4,7 @@ from services import Gemini
 from functools import partial
 from dotenv import load_dotenv
 import os
+from redis import redis
 
 load_dotenv()
 
@@ -11,4 +12,5 @@ load_dotenv()
 if __name__=="__main__":
     queue = queue_register[os.environ["SELECTED_QUEUE_SERVICE"]]
     gemini = Gemini()
-    future = queue.consume(partial(task_factory, services=[gemini], queue=queue))
+    
+    queue.consume(partial(task_factory, services=[gemini], queue=queue, storage=redis))

@@ -15,7 +15,8 @@ class TaskExecutor(ABC):
 
     @abstractmethod
     def run_task(task):
-        raise NotADirectoryError
+        raise NotImplementedError
+
 
 class Gemini(TaskExecutor):
     def __init__(self):
@@ -26,6 +27,5 @@ class Gemini(TaskExecutor):
         return True
 
     def run_task(self, task):
-        logging.debug(task.params)
         response = self.model.generate_content(task.to_prompt())
-        logging.debug(response) 
+        task.to_storage(response.text) 
