@@ -1,0 +1,22 @@
+.navbar {
+    height: 3rem;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--color-one);
+}
+
+.navlinks {
+    display: flex;
+    gap: 1rem;
+}
+
+.navlinks a {
+    color: var(--color-three);
+    text-decoration: none;
+}
+
+.navlinks .currentLink {
+    text-decoration: underline;
+}
