@@ -26,7 +26,7 @@ class GooglePubSub(TaskQueue):
         future.result()
     
     @staticmethod
-    def consume(callback) -> None:
+    def consume(callback: Callable) -> None:
         topic_name = 'projects/{project_id}/topics/{topic}'.format(
             project_id=os.getenv('GOOGLE_CLOUD_PROJECT'),
             topic=os.getenv('GOOGLE_CLOUD_TOPIC'),
@@ -39,7 +39,10 @@ class GooglePubSub(TaskQueue):
 
         with pubsub_v1.SubscriberClient() as subscriber:
             future = subscriber.subscribe(subscription_name, callback)
-            future.result() 
+            try:
+                future.result()
+            except KeyboardInterrupt:
+                future.cancel()
 
 
 queue_register = {"GCP": GooglePubSub}

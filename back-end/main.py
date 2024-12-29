@@ -48,7 +48,7 @@ async def get_resume_information(resume: UploadFile = File(...), token: str = ""
             pages = [ page.extract_text() for page in reader.pages ]
             text = "".join(pages)
             t_queue.publish(json.dumps({"task": "resume-information", 
-                               "text": text.replace('"', "'"),
+                               "params": text.replace('"', "'"),
                                "structured": True,
                                "priority": user_data[token][0]["order"]}) 
                             ) 

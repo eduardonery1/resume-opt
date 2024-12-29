@@ -10,6 +10,10 @@ logging.basicConfig(level=logging.DEBUG)
 
 class TaskExecutor(ABC):
     @abstractmethod
+    def is_available():
+        raise NotImplementedError
+
+    @abstractmethod
     def run_task(task):
         raise NotADirectoryError
 

@@ -7,7 +7,8 @@ import os
 
 load_dotenv()
 
+
 if __name__=="__main__":
     queue = queue_register[os.environ["SELECTED_QUEUE_SERVICE"]]
     gemini = Gemini()
-    queue.consume(partial(task_factory, services=[gemini], queue=queue))
+    future = queue.consume(partial(task_factory, services=[gemini], queue=queue))
