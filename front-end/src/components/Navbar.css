@@ -1,10 +1,25 @@
 .navbar {
-    height: 3rem;
+    height: 4rem;
     width: 100%;
     display: flex;
     justify-content: space-between;
     align-items: center;
     background-color: var(--color-one);
+    padding: 0 0.5rem;
+}
+
+.navlogo {
+    height: 80%;
+}
+
+.navmenu {
+    height: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    background-color: transparent;
+    border: none;
 }
 
 .navlinks {
@@ -15,6 +30,11 @@
 .navlinks a {
     color: var(--color-three);
     text-decoration: none;
+    font-size: 1.1rem;
+}
+
+.navlinks a:hover {
+    color: var(--color-six);
 }
 
 .navlinks .currentLink {
