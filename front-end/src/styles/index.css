@@ -14,4 +14,9 @@
     --color-four: #4A2C2A;
     --color-five: #D6C6B9;
     --color-six: #FF7F00;
+    --color-shadow-1: #2C2C2C55
+}
+
+#root {
+    height: 100vh;
 }
