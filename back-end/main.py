@@ -4,6 +4,7 @@ from PyPDF2 import PdfReader
 from collections import defaultdict
 from sys import argv, exit
 from dotenv import load_dotenv
+from fastapi.responses import StreamingResponse
 import os
 import logging
 import json
@@ -12,7 +13,7 @@ import task_queue
 
 
 load_dotenv()
-user_data = defaultdict(list)
+user_data = defaultdict(dict)
 logging.basicConfig(level=logging.DEBUG)
 
 if bool(os.environ["DEBUG"]):
@@ -33,7 +34,7 @@ def get_auth():
     return {"auth": token}, status.HTTP_200_OK
 
 @app.post("/resume-information")
-async def get_resume_information(resume: UploadFile = File(...), token: str = ""):
+async def post_resume_information(resume: UploadFile = File(...), token: str = ""):
     try:
         if token not in user_data:
             return {"error": "Invalid token."}, status.HTTP_400_BAD_REQUEST
@@ -62,6 +63,22 @@ async def get_resume_information(resume: UploadFile = File(...), token: str = ""
     except Exception as e:
         logging.exception("Unexpected error occured:", str(e))
         return status.HTTP_500_INTERNAL_SERVER_ERROR
+
+
+async def resume_information_events(token):
+    while True:
+        try:
+            yield str(user_data[token]["resume-information"])
+        except KeyError as e:
+            logging.exception("KeyError occured while fetching resume information for token:", token)
+        finally:
+            await asyncio.sleep(.5)
+
+@app.get("/resume-information")
+async def get_resume_information(token: str):
+    if token not in user_data:
+        return {"text": "Invalid token."}, status.HTTP_400_BAD_REQUEST
+    return await StreamingResponse(resume_information_events(token), media_type="text/event-stream")
 
 
 

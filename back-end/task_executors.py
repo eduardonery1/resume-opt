@@ -28,4 +28,4 @@ class Gemini(TaskExecutor):
 
     def run_task(self, task):
         response = self.model.generate_content(task.to_prompt())
-        task.to_storage(response.text) 
+        return response.text
