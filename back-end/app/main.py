@@ -5,6 +5,7 @@ from collections import defaultdict
 from sys import argv, exit
 from dotenv import load_dotenv
 from fastapi.responses import StreamingResponse
+from queue_publishers import GooglePubSubPublisher
 import os
 import logging
 import json
@@ -14,24 +15,30 @@ import task_queue
 
 load_dotenv()
 user_data = defaultdict(dict)
+queue_publisher = GooglePubSubPublisher(os.environ["GOOGLE_CLOUD_PROJECT"], os.environ["GOOGLE_CLOUD_TOPIC"])
 logging.basicConfig(level=logging.DEBUG)
 
 if bool(os.environ["DEBUG"]):
-    user_data[os.environ["DEBUG_TOKEN"]].append({"order": 0})
+    user_data[os.environ["DEBUG_TOKEN"]]={"order": 0}
 
-try:
-    t_queue = task_queue.queue_register[os.environ["SELECTED_QUEUE_SERVICE"]]
-except KeyError as e:
-    logging.debug("SELECTED_QUEUE_SERVICE IS INVALID! EXITING...")
-    exit()
 
 app = FastAPI()
+
 
 @app.get("/auth")
 def get_auth():
     token = str(uuid.uuid4())
-    user_data[token].append({"order": len(user_data)})
+    user_data[token] = {"order": len(user_data)}
     return {"auth": token}, status.HTTP_200_OK
+
+def validate_resume_pdf(text: str) -> bool:
+    keywords = {"experience", "education", "skills", "contact", "resume"}
+    count = 0
+    text = text.lower()
+    for word in keywords:
+        if word in text:
+            count += 1
+    return count/len(keywords) > 0.5
 
 @app.post("/resume-information")
 async def post_resume_information(resume: UploadFile = File(...), token: str = ""):
@@ -48,13 +55,16 @@ async def post_resume_information(resume: UploadFile = File(...), token: str = "
         try:
             pages = [ page.extract_text() for page in reader.pages ]
             text = "".join(pages)
+            if not validate_resume_pdf(text):
+                return {"error": "Invalid resume PDF."}, status.HTTP_400_BAD_REQUEST
+
             t_queue.publish(json.dumps({"task": "resume-information", 
                                "params": text.replace('"', "'"),
-                               "config": {"storage": "upstash_redis"},
                                "auth": token,
-                               "structured": True,
-                               "priority": user_data[token][0]["order"]}) 
+                               "structured": True
+                               }) 
                             ) 
+
             return {"text": "Request queued."}, status.HTTP_200_OK
         except IOError as e:
             logging.exception("Queue service error:", str(e))

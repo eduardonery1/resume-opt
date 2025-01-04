@@ -35,6 +35,7 @@ class GooglePubSub(TaskQueue):
         subscription_name = 'projects/{project_id}/subscriptions/{sub}'.format(
             project_id=os.getenv('GOOGLE_CLOUD_PROJECT'),
             sub=os.getenv('GOOGLE_CLOUD_SUB'),  
+    
             )
 
         with pubsub_v1.SubscriberClient() as subscriber:

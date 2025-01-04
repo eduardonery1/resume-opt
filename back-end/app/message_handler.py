@@ -49,6 +49,7 @@ def message_handler(message ,services: list[TaskExecutor], queue: TaskQueue) -> 
         response = task_executor.run_task(task) #perhaps putting this part in message_handler using a observer is better.
         user_data[task_json["auth"]].update({task_json["task"]: response })
         message.ack()
+
     except Exception as e:
         logging.exception("An unexpected error occured:", str(e))
         message.ack()
