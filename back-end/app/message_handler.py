@@ -15,7 +15,11 @@ load_dotenv()
 
 def message_handler(message ,services: list[TaskExecutor], queue: TaskQueue) -> None:
     """
-    Check available LLM services and define callback for task queue.
+    Handles incoming messages from the queue, processes them, and updates user data.
+    Args:
+        message: The message received from the queue.
+        services: A list of available task executors.
+        queue: The task queue instance.
     """
     logging.info("Running task_factory")
     try:
@@ -39,9 +43,9 @@ def message_handler(message ,services: list[TaskExecutor], queue: TaskQueue) -> 
             message.ack()
             return
 
-        try:
-            task_executor = filter(lambda s: s.is_available(), services).__next__()
-        except IndexError as e:
+        
+        task_executor = next(filter(lambda s: s.is_available(), services), None)
+        if task_executor is None:
             logging.error("No available services.") 
             message.nack()
             return 

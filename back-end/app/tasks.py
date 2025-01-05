@@ -14,6 +14,7 @@ class Task(BaseModel):
     
     @abstractmethod
     def to_prompt(self) -> str:
+        """ Abstract method to generate the prompt string from the task parameters. """
         raise NotImplementedError
 
 class GenerateResumeJSON(Task):
@@ -26,6 +27,7 @@ class GenerateResumeJSON(Task):
                         "projects_or_responsabilities": ["project description with person's role and impact with metrics", ...]}]}. """
 
     def to_prompt(self) -> str:
+        """ This method formats the prompt string with the parameters provided. """
         return self.prompt.format(self.params[0])
 
-taskcode_to_task = {"resume-information": GenerateResumeJSON }
+taskcode_to_task = {"resume": GenerateResumeJSON }
