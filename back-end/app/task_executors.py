@@ -7,7 +7,6 @@ import os
 
 
 load_dotenv()
-logging.basicConfig(level=logging.DEBUG)
 
 class TaskExecutor(ABC):
     """ An abstract base class for TaskExecutors. """
@@ -35,6 +34,7 @@ class Gemini(TaskExecutor):
     def run_task(self, task: Task) -> str:
         """ Runs the given task and returns its result. """
         if not self.is_available():
+            logging.warning("Gemini API is not available.")
             raise Exception("Gemini API is not available.")
 
         response = self.model.generate_content(task.to_prompt())

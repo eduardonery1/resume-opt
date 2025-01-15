@@ -3,8 +3,18 @@ import logging
 from pydantic import BaseModel, ValidationError
 from abc import abstractmethod
 from typing import Dict, List, Any
-from task_executors import TaskExecutor
-from task_queue import TaskQueue
+
+
+class TaskRequest(BaseModel):
+    id: str
+    auth: str
+    task_name: str
+    payload: Dict
+
+
+class TaskResponse(BaseModel):
+    id: str
+    payload: Dict
 
 
 class Task(BaseModel):
@@ -16,6 +26,7 @@ class Task(BaseModel):
     def to_prompt(self) -> str:
         """ Abstract method to generate the prompt string from the task parameters. """
         raise NotImplementedError
+
 
 class GenerateResumeJSON(Task):
     prompt: str = """This text was extracted from a professional resume PDF file: "{}".

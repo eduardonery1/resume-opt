@@ -1,5 +1,6 @@
 import logging
 import os
+import asyncio
 from abc import ABC, abstractmethod
 from google.cloud import pubsub_v1
 from typing import Callable
@@ -8,7 +9,7 @@ from asyncio.futures import Future
 
 class QueueConsumer(ABC):
     @abstractmethod
-    def consume(self, callback: Callable) -> Future:
+    def consume(self, callback: Callable) -> None:
        raise NotImplementedError
 
 
@@ -21,15 +22,13 @@ class GooglePubSubConsumer(QueueConsumer):
 
         self._consumer = pubsub_v1.SubscriberClient()
 
-    def consume(self, callback: Callable) -> Future:
+    async def consume(self, callback: Callable) -> None:
         try:
             future = self._consumer.subscribe(self._subscription_name, callback)
-            future.result()
+            await asyncio.wrap_future(future)
         except IOError as e:
-            logging.exception("Failed subcribing to Google PubSub.", str(e))
+            logging.exception("Failed subcribing to Google PubSub.")
             raise e
-        except Exception as e:
-            logging.exception("An unexpected error occured", str(e))
-            raise e
+
             
 

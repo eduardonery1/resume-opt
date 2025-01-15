@@ -1,0 +1,54 @@
+DEBUG:asyncio:Using selector: EpollSelector
+INFO:root:Requesting 0...
+DEBUG:google.auth._default:Checking None for explicit credentials as part of auth process...
+DEBUG:google.auth._default:Checking Cloud SDK credentials as part of auth process...
+DEBUG:google.auth._default:Checking None for explicit credentials as part of auth process...
+DEBUG:google.auth._default:Checking Cloud SDK credentials as part of auth process...
+DEBUG:root:Current request: {'auth': 'test_auth', 'task_name': 'test-task', 'payload': {'param1': '0'}}
+INFO:root:DictStorage.create: Created queue for ID: '763b891f-88e7-49ea-82d7-32095ee86e4a'.
+INFO:root:Publishing task 'test-task' with ID '763b891f-88e7-49ea-82d7-32095ee86e4a' to topic 'test-topic'.
+INFO:root:Successfully associated storage with ID: 763b891f-88e7-49ea-82d7-32095ee86e4a.
+INFO:root:Message with ID: 763b891f-88e7-49ea-82d7-32095ee86e4a was sent to topic: 'test-topic'.
+INFO:root:Consuming from 'test-sub'...
+DEBUG:google.cloud.pubsub_v1.subscriber._protocol.streaming_pull_manager:Creating a stream, default ACK deadline set to 60 seconds.
+DEBUG:google.cloud.pubsub_v1.subscriber._protocol.dispatcher:Started helper thread Thread-CallbackRequestDispatcher
+DEBUG:google.api_core.bidi:Started helper thread Thread-ConsumeBidirectionalStream
+DEBUG:google.cloud.pubsub_v1.subscriber._protocol.leaser:The current deadline value is 10 seconds.
+DEBUG:google.cloud.pubsub_v1.subscriber._protocol.leaser:Started helper thread Thread-LeaseMaintainer
+DEBUG:google.api_core.bidi:waiting for recv.
+DEBUG:google.cloud.pubsub_v1.subscriber._protocol.leaser:Snoozing lease management for 4.514032 seconds.
+DEBUG:google.cloud.pubsub_v1.subscriber._protocol.heartbeater:Sent heartbeat.
+DEBUG:google.cloud.pubsub_v1.subscriber._protocol.heartbeater:Started helper thread Thread-Heartbeater
+INFO:root:Listening to messages of subscription: 'test-sub'.
+INFO:root:DictStorage.read: Reading from ID: '763b891f-88e7-49ea-82d7-32095ee86e4a'.
+INFO:root:DictStorage.read: Acquired _lock for '763b891f-88e7-49ea-82d7-32095ee86e4a'.
+INFO:root:DictStorage.read: Released _lock for '763b891f-88e7-49ea-82d7-32095ee86e4a'.
+DEBUG:google.cloud.pubsub_v1.publisher.client:Commit thread is waking up
+DEBUG:google.auth.transport.requests:Making request: POST https://oauth2.googleapis.com/token
+DEBUG:google.auth.transport.requests:Making request: POST https://oauth2.googleapis.com/token
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): oauth2.googleapis.com:443
+DEBUG:urllib3.connectionpool:Starting new HTTPS connection (1): oauth2.googleapis.com:443
+DEBUG:urllib3.connectionpool:https://oauth2.googleapis.com:443 "POST /token HTTP/1.1" 200 None
+DEBUG:google.cloud.pubsub_v1.publisher._batch.thread:gRPC Publish took 0.6864557266235352 seconds.
+INFO:root:Future for message ID: '13536431270266916' was successfully published.
+DEBUG:urllib3.connectionpool:https://oauth2.googleapis.com:443 "POST /token HTTP/1.1" 200 None
+DEBUG:google.api_core.bidi:recved response.
+DEBUG:google.cloud.pubsub_v1.subscriber._protocol.streaming_pull_manager:Processing 1 received message(s), currently on hold 0 (bytes 0).
+DEBUG:google.cloud.pubsub_v1.subscriber._protocol.streaming_pull_manager:Released held message, scheduling callback for it, still on hold 0 (bytes 0).
+INFO:root:Callback received message: b'{"id":"763b891f-88e7-49ea-82d7-32095ee86e4a","auth":"test_auth","task_name":"test-task","payload":{"param1":"0"}}'.
+DEBUG:google.api_core.bidi:waiting for recv.
+DEBUG:root:GooglePubSub._update_storage: id = 763b891f-88e7-49ea-82d7-32095ee86e4a, result = id='763b891f-88e7-49ea-82d7-32095ee86e4a' payload={'param1': '0'}, message: Message {
+  data: b'{"id":"763b891f-88e7-49ea-82d7-32095ee86e4a","auth...'
+  ordering_key: ''
+  attributes: {}
+}.
+INFO:root:Attempt 0.
+INFO:root:DictStorage.update: Updating for ID: '763b891f-88e7-49ea-82d7-32095ee86e4a'.
+INFO:root:DictStorage.update: Acquiring _lock for ID: '763b891f-88e7-49ea-82d7-32095ee86e4a'.
+INFO:root:DictStorage.update: Released _lock for ID: '763b891f-88e7-49ea-82d7-32095ee86e4a'.
+INFO:root:DictStorage.update: Updated 'TaskResponse' for ID: '763b891f-88e7-49ea-82d7-32095ee86e4a'.
+INFO:root:Request sucessfully handled.
+INFO:root:DictStorage.delete: Deleting from ID: '763b891f-88e7-49ea-82d7-32095ee86e4a'.
+INFO:root:DictStorage.delete: Deleted queue for ID: '763b891f-88e7-49ea-82d7-32095ee86e4a'.
+INFO:root:Message with ID: 763b891f-88e7-49ea-82d7-32095ee86e4a was sent to storage.
+DEBUG:google.cloud.pubsub_v1.subscriber._protocol.dispatcher:Handling 1 batched requests

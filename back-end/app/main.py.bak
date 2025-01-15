@@ -1,0 +1,156 @@
+from fastapi import FastAPI, UploadFile, File, status, Response, BackgroundTasks
+from io import BytesIO
+from PyPDF2 import PdfReader
+from collections import defaultdict
+from sys import argv, exit
+from dotenv import load_dotenv
+from fastapi.responses import StreamingResponse
+from queue_publishers import GooglePubSubPublisher
+from queue_consumers import GooglePubSubConsumer
+from functools import partial
+from json import JSONDecodeError
+import os
+import asyncio
+import logging
+import json
+import uuid 
+import task_queue
+
+MAX_QUEUE_SIZE = 10_000
+
+load_dotenv()
+user_data = defaultdict(dict)
+queue_publisher = GooglePubSubPublisher()
+queue_consumer = GooglePubSubConsumer(os.getenv('GOOGLE_CLOUD_PROJECT'))
+
+task_queue_results = asyncio.PriorityQueue(maxsize=MAX_QUEUE_SIZE)
+
+
+if bool(os.getenv("DEBUG")):
+    logging.basicConfig(level=logging.DEBUG)
+    user_data[os.getenv("DEBUG_TOKEN")]={"order": 0}
+    logging.info("Running on DEBUG mode.")
+else:
+    logging.basicConfig(level=logging.INFO)
+    logging.info("Running on Production mode.")
+
+app = FastAPI()
+
+
+@app.get("/auth")
+def get_auth():
+    """
+    This function generates a unique authentication token for the user.
+    It adds the token to the user_data dictionary with an order value.
+    """
+    token = str(uuid.uuid4())
+    user_data[token] = {"order": len(user_data)}
+    return {"auth": token}, status.HTTP_200_OK
+
+
+def validate_resume_pdf(text: str) -> bool:
+    """
+    This function validates if the given text is a resume.
+    It checks if the text contains at least half of the keywords.
+    """
+    keywords = {"experience", "education", "skills", "contact", "resume"}
+    count = 0
+    text = text.lower()
+    for word in keywords:
+        if word in text:
+            count += 1
+    return count/len(keywords) > 0.5
+
+@app.post("/resume")
+async def post_resume(background_tasks: BackgroundTasks, resume: UploadFile = File(...), token: str = ""):
+    """
+    This function receives a resume PDF file and extracts text from it.
+    It then validates the extracted text to ensure it is a resume.
+    If valid, it publishes a message to a Message Queue queue with the extracted text.
+    """
+    if token not in user_data:
+        return {"error": "Invalid token."}, status.HTTP_400_BAD_REQUEST
+
+    try:
+        contents = await resume.read()
+        reader = PdfReader(BytesIO(contents))
+    except IOError as e:
+        return {"error": "Invalid PDF File."}, status.HTTP_400_BAD_REQUEST
+    
+    pages = [ page.extract_text() for page in reader.pages ]
+    text = "".join(pages)
+
+    if not validate_resume_pdf(text):
+        return {"error": "Invalid resume PDF."}, status.HTTP_400_BAD_REQUEST
+
+
+    try:
+        message = json.dumps({"task": "resume-information", 
+                           "params": text.replace('"', "'"),
+                           "auth": token,
+                           "structured": True
+                           })
+        await queue_publisher.publish(message) 
+    except IOError as e:
+        logging.exception("Queue publishing service error:", str(e))
+        return status.HTTP_500_INTERNAL_SERVER_ERROR
+
+    def callback(message, token, storage):
+        try:
+            data = json.loads(message.data.decode('utf8'))
+        except JSONDecodeError as e:
+            logging.exception("Invalid message format", str(e), "Message:", message.data)
+            message.ack()
+            return
+        
+        try:
+            logging.debug(f"Current token is {data["auth"]}. Expected: {token}")
+            if data["auth"] == token:
+                storage[data["auth"]]["resume-information"] = "done."
+                message.ack()
+                logging.info(f"Message from {token} acknoledged.")
+        except KeyError as e:
+            logging.exception("No auth key in message.", str(e), data)
+            message.ack()
+            return
+
+    background_tasks.add_task(queue_consumer.consume, partial(callback, token=token, storage=user_data))
+    return {"text": "Request queued."}, status.HTTP_200_OK
+    
+
+async def get_resume_events(token):
+    #use async queue
+    while True:
+        try:
+            task = user_data[token].get("resume-information", None)
+            if task is not None:
+                yield f"data: {task}\n\n"       
+                logging.info(f"Data sent for token {token}.")
+                break
+            yield "data: {'message': 'Task not ready.'}\n\n"
+        except KeyError as e:
+            logging.exception(f"KeyError occured while fetching resume information for token: {token}")
+            message.ack()
+            break
+        else:
+            logging.info(f"Task not ready for token {token}.")
+            await asyncio.sleep(1)
+
+
+@app.get("/resume")
+async def get_resume(token: str):
+    """ This function returns the resume information for a given token using server-sent events. """
+    if token not in user_data:
+        return {"text": "Invalid token."}, status.HTTP_400_BAD_REQUEST
+     
+    try:
+        return StreamingResponse(get_resume_events(token), media_type="text/event-stream")
+
+    except Exception as e:
+        logging.exception("Unexpected error occured while fetching resume information:", str(e))
+        return status.HTTP_500_INTERNAL_SERVER_ERROR
+
+
+if __name__=="__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
