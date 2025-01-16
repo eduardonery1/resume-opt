@@ -24,6 +24,23 @@ class TaskQueue(ABC):
     async def publish_task(message: TaskRequest, storage: TaskResponseStorage) -> None:
         raise NotImplementedError
 
+class TaskQueueCleaner(ABC):
+    @abstractmethod
+    async def clean_queue(queue: TaskQueue) -> None:
+        raise NotImplementedError
+
+class TaskQueueFactory:
+    @staticmethod
+    def create() -> TaskQueue:
+        return GooglePubSub(os.getenv('GOOGLE_CLOUD_PROJECT')) 
+
+class GooglePubSubCleaner(TaskQueueCleaner):
+    @staticmethod
+    async def clean_queue() -> None:
+        # This is a placeholder implementation.  A real implementation would need to
+        # interact with Google Pub/Sub to delete messages from a topic or subscription.
+        logging.warning("GooglePubSubCleaner.clean_queue is not implemented.")
+        pass
 
 class GooglePubSubTopicManager:
     """ Manages Google Pub/Sub topics and subscriptions for tasks. """
@@ -74,7 +91,7 @@ class GooglePubSubCallback:
 
         if storage is None:
             logging.warning(f"No storage found for ID: {id}.")
-            message.ack() # Try again later
+            message.nack() # Try again later
             return
         
         try:
@@ -86,7 +103,7 @@ class GooglePubSubCallback:
 
         except Exception as e:
             logging.exception(f"GooglePubSubCallback._update_storage: Error updating storage for ID: {id}: {e}")
-            message.ack()
+            message.nack()
         
         else:
             message.ack()
@@ -231,7 +248,4 @@ class GooglePubSub(TaskQueue):
         self._consume(sub, self._callback)
         
 
-class TaskQueueFactory:
-    @staticmethod
-    def create() -> TaskQueue:
-        return GooglePubSub(os.getenv('GOOGLE_CLOUD_PROJECT')) 
+

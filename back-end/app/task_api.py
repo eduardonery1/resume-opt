@@ -21,8 +21,6 @@ class Container(containers.DeclarativeContainer):
     queue = providers.ThreadSafeSingleton(queue_factory)
     result_storage = providers.ThreadSafeSingleton(DictStorage)
 
-
-
 @inject
 async def request_task(request: Dict, 
                        storage = Provide[Container.result_storage], 
@@ -101,20 +99,21 @@ async def request_task(request: Dict,
 
 if __name__=="__main__":
     import sys
-    logging.basicConfig(level=logging.DEBUG, filename="logs.txt", filemode='w')
+    import time
+    logging.basicConfig(level=logging.INFO)
     container = Container()
     container.wire(modules=[__name__])
 
-    async def main(i):
+    async def single_request(i):
         try:
             request = {
                 "auth": "test_auth",
                 "task_name": "test-task",
                 "payload": {"param1": str(i)}
             }
-            logging.info(f"Requesting {i}...")
+            #logging.info(f"Requesting {i}...")
             result = await request_task(request)
-            print(f"Task result: {result}")
+            #print(f"Task result: {result}")
 
         except (UnableToFetchResultError, InvalidTaskName, ValidationError, KeyError) as e:
             logging.error(f"Error processing task: {e}")
@@ -123,8 +122,15 @@ if __name__=="__main__":
         except Exception as e:
             logging.exception(f"An unexpected error occurred: {e}")
             sys.exit(1)
-
-    loop = asyncio.new_event_loop()
-    tasks = [loop.create_task(main(i)) for i in range(1)]
-    loop.run_until_complete(asyncio.gather(*tasks))
     
+    async def main():
+        loop = asyncio.get_running_loop()
+        for n in [1, 10, 100]:
+            tasks = [loop.create_task(single_request(i)) for i in range(n)]
+            start = time.time()
+            await asyncio.gather(*tasks)
+            end = time.time()
+            print(f"Total time taken {n} requests: {end - start:.4f} seconds. AVG time per req: {(end - start) / n:.6f} seconds")
+
+    asyncio.run(main())
+        
