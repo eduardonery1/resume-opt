@@ -14,6 +14,7 @@ load_dotenv()
 class StorageError(Exception):
     """ Base class for all storage errors. """
     pass
+
 class NotFoundError(StorageError):
     """ Raised when a requested item is not found. """
     pass

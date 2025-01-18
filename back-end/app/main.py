@@ -24,6 +24,7 @@ user_data = defaultdict(dict)
 queue_publisher = GooglePubSubPublisher()
 queue_consumer = GooglePubSubConsumer(os.getenv('GOOGLE_CLOUD_PROJECT'))
 task_queue_results = asyncio.PriorityQueue(maxsize=MAX_QUEUE_SIZE)
+
 if bool(os.getenv('DEBUG')):
     logging.basicConfig(level=logging.DEBUG)
     user_data[os.getenv('DEBUG_TOKEN')] = {'order': 0}

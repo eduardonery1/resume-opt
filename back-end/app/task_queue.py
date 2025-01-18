@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Callable, Dict, Tuple
+from typing import Callable, Dict, Tuple, Set
 from google.cloud.pubsub_v1 import PublisherClient, SubscriberClient
 from google.cloud.pubsub_v1.subscriber.message import Message
 from tasks import TaskRequest, TaskResponse
@@ -21,40 +21,34 @@ load_dotenv()
 
 class TaskQueue(ABC):
     @abstractmethod
-    async def publish_task(message: TaskRequest, storage: TaskResponseStorage) -> None:
+    def consume(*args, **kwargs):
         raise NotImplementedError
 
-class TaskQueueCleaner(ABC):
     @abstractmethod
-    async def clean_queue(queue: TaskQueue) -> None:
+    def publish(message: str, *args, **kwargs):
         raise NotImplementedError
 
-class TaskQueueFactory:
-    @staticmethod
-    def create() -> TaskQueue:
-        return GooglePubSub(os.getenv('GOOGLE_CLOUD_PROJECT')) 
-
-class GooglePubSubCleaner(TaskQueueCleaner):
-    @staticmethod
-    async def clean_queue() -> None:
-        # This is a placeholder implementation.  A real implementation would need to
-        # interact with Google Pub/Sub to delete messages from a topic or subscription.
-        logging.warning("GooglePubSubCleaner.clean_queue is not implemented.")
-        pass
 
 class GooglePubSubTopicManager:
     """ Manages Google Pub/Sub topics and subscriptions for tasks. """
-    task_name_to_topic_sub_pairs = {"test-task": ("test-topic", "test-sub")} # Prototype for development
-    
-    @staticmethod
-    def get_topic_sub_pair(task_name: str) -> Tuple:
-        try:
-            return GooglePubSubTopicManager.task_name_to_topic_sub_pairs[task_name]
-        except KeyError:
+
+    def __init__(self) -> None:
+        self.task_name_to_topic_sub_pair: Dict[str, Tuple[str, str]] = {"test-task": ("test-topic", "test-sub")} # Prototype for development
+        self.topic_sub_response_pairs: Set[Tuple[str, str]] = {("example-topic", "example-sub")} # Public variables that don't need get methods that just return.
+
+    def get_topic_sub_pair(self, task_name: str) -> Tuple[str, str]:
+        """Retrieves the topic and subscription pair for a given task name."""
+        pair = self.task_name_to_topic_sub_pair.get(task_name)
+        if not pair:
             raise InvalidTaskName(f"Task name '{task_name}' not found.")
+        return pair
+
+    @property
+    def topic_sub_response_pairs(self) -> Set[Tuple[str, str]]:
+        return self.topic_sub_response_pairs
 
 
-class GooglePubSubCallback:
+class GooglePubSubRequestCallback:
     """ Handles callbacks from Google Pub/Sub subscriptions. """
     
     def __init__(self, loop: AbstractEventLoop) -> None:
@@ -102,7 +96,7 @@ class GooglePubSubCallback:
             message.ack()
 
         except Exception as e:
-            logging.exception(f"GooglePubSubCallback._update_storage: Error updating storage for ID: {id}: {e}")
+            logging.exception(f"{self.__class__.__name__}._update_storage: Error updating storage for ID: {id}: {e}")
             message.nack()
         
         else:
@@ -148,7 +142,8 @@ class GooglePubSub(TaskQueue):
             raise ValueError("Project ID must be provided.")
 
         self._loop = asyncio.get_running_loop() # Python's 3.10+ get_running_loop.
-        self._callback = GooglePubSubCallback(self._loop)
+        self._callback = GooglePubSubRequestCallback(self._loop)
+        self.topic_manager = GooglePubSubTopicManager()
         
         self._pub_client = PublisherClient()
         self._consumer_client = SubscriberClient()
@@ -177,7 +172,7 @@ class GooglePubSub(TaskQueue):
             self._consumer_pool.pop(key)
         logging.info(f"Subscription '{key}' was successfully cancelled.")
  
-    def _publish(self, message: str, topic: str, request_id: str, tries = 3) -> None:
+    def publish(self, message: str, topic: str, request_id: str, tries = 3) -> None:
         topic_name = 'projects/{project}/topics/{topic}'.format(
             project=self._project,
             topic=topic,  
@@ -192,7 +187,7 @@ class GooglePubSub(TaskQueue):
         future.add_done_callback(
                 partial(self._cleanup_pub_future, key = request_id, topic = topic))
 
-    def _consume(self, subscription: str, callback: Callable) -> None:
+    def consume(self, subscription: str, callback: Callable) -> None:
         with self._lock_consumer_pool: # Locking for reading as concurrent writting might cause issues.
             if subscription in self._consumer_pool: # One kind of task has a specific consumer running, there is a low fixed amount of consumers.
                 logging.info(f"This subscription {subscription} is already being listened to.") 
@@ -201,8 +196,7 @@ class GooglePubSub(TaskQueue):
         logging.info(f"Consuming from '{subscription}'...")
         subscription_name = 'projects/{project}/subscriptions/{sub}'.format(
             project=self._project,
-            sub=subscription  
-            )
+            sub=subscription)
 
         future = self._consumer_client.subscribe(subscription_name, callback) # This runs on a separate thread
 
@@ -210,11 +204,14 @@ class GooglePubSub(TaskQueue):
             self._consumer_pool[subscription] = future
 
         future.add_done_callback(
-                    partial(self._cleanup_sub_future, key = subscription))
+            partial(self._cleanup_sub_future, key = subscription)) # As the callback removes the future from _consumer_pool, guarantee it's there first.
         logging.info(f"Listening to messages of subscription: '{subscription}'.")
 
 
-    async def publish_task(self, message: TaskRequest, storage: TaskResponseStorage, tries: int = 3) -> None:
+class GooglePubSubTaskRequester(ABC):
+    def __init__(self):
+        pass
+    async def publish_task(self, message: TaskRequest, storage: TaskResponseStorage, queue:) -> None:
         """ Publishes a task to Google Pub/Sub.
         Args:
             message: The task message.
@@ -231,9 +228,8 @@ class GooglePubSub(TaskQueue):
         if not isinstance(storage, TaskResponseStorage):
             raise ValueError("'storage' argument must be derived from TaskResponseStorage.")
 
-        task_name = message.task_name
         try:
-            topic, sub = GooglePubSubTopicManager.get_topic_sub_pair(task_name)
+            topic, sub = self.topic_manager.get_topic_sub_pair(message.task_name)
 
         except InvalidTaskName as e:
             logging.critical("Invalid task name sent to queue. \
@@ -246,6 +242,6 @@ class GooglePubSub(TaskQueue):
 
         self._publish(message.model_dump_json(), topic, message.id)
         self._consume(sub, self._callback)
-        
+
 
 
