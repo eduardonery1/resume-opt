@@ -30,19 +30,19 @@ class TaskResponseStorage(ABC):
         There is only one TaskResponse per ID, as they are request IDs. 
     """
     @abstractmethod
-    async def create(id: str) -> None:
+    async def create(request_id: str) -> None:
         raise NotImplementedError
     
     @abstractmethod
-    async def read(id: str) -> Optional[TaskResponse]:
+    async def read(request_id: str) -> Optional[TaskResponse]:
         raise NotImplementedError
     
     @abstractmethod
-    async def update(id: str, raw_data: bytes | TaskResponse) -> None:
+    async def update(request_id: str, raw_data: bytes | TaskResponse) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    async def delete(id: str) -> None:
+    async def delete(request_id: str) -> None:
         raise NotImplementedError
 
 
@@ -57,40 +57,40 @@ class DictStorage(TaskResponseStorage):
         self._lock = Lock()
         self._maxsize = maxsize
 
-    async def create(self, id: str) -> None:
+    async def create(self, request_id: str) -> None:
         """ Sets the result queue for the given ID.
 
         Args:
             id: The ID of the result queue.
             queue: The result queue to set.
         """
-        if not isinstance(id, str):
-            logging.error(f"DictStorage.update: 'id' must be a string. Received: {type(id)}.")
-            raise TypeError("DictStorage.update: 'id' must be a string.")
+        if not isinstance(request_id, str):
+            logging.error(f"DictStorage.update: 'request_id' must be a string. Received: {type(request_id)}.")
+            raise TypeError("DictStorage.update: 'request_id' must be a string.")
         queue = Queue(maxsize=1)
 
         async with self._lock:
-            self._id_to_result_queue.update({id: queue})
-        logging.info(f"DictStorage.create: Created queue for ID: '{id}'.")
+            self._id_to_result_queue.update({request_id: queue})
+        logging.info(f"DictStorage.create: Created queue for ID: '{request_id}'.")
 
-    async def read(self, id: str):
-        logging.info(f"DictStorage.read: Reading from ID: '{id}'.")
+    async def read(self, request_id: str):
+        logging.info(f"DictStorage.read: Reading from ID: '{request_id}'.")
         async with self._lock:
-            logging.info(f"DictStorage.read: Acquired _lock for '{id}'.")
-            queue = self._id_to_result_queue.get(id, None)
-        logging.info(f"DictStorage.read: Released _lock for '{id}'.")
+            logging.info(f"DictStorage.read: Acquired _lock for '{request_id}'.")
+            queue = self._id_to_result_queue.get(request_id, None)
+        logging.info(f"DictStorage.read: Released _lock for '{request_id}'.")
 
         if not queue:
-            raise NotFoundError(f"Result queue for ID {id} not found.")
+            raise NotFoundError(f"Result queue for ID {request_id} not found.")
         
         try:
             result = await queue.get()
         except RetryError:
-            logging.exception(f"DictStorage.read: Timeout waiting for result from ID: '{id}'.")
+            logging.exception(f"DictStorage.read: Timeout waiting for result from ID: '{request_id}'.")
             raise
         except Exception as e:
             logging.exception("DictStorage.read: Unexpected exception:", str(e))
-            raise e
+            raise e 
         
         queue.task_done()
         
@@ -134,7 +134,7 @@ class DictStorage(TaskResponseStorage):
         queue.put_nowait(data)
         logging.info(f"DictStorage.update: Updated 'TaskResponse' for ID: '{request_id}'.")
                 
-    async def delete(self, id: str) -> None:
+    async def delete(self, request_id: str) -> None:
         """ Removes the result queue associated with the given ID.
 
         Args:
@@ -143,13 +143,13 @@ class DictStorage(TaskResponseStorage):
         Raises:
             KeyError: If the result queue for the given ID does not exist.
         """
-        logging.info(f"DictStorage.delete: Deleting from ID: '{id}'.")
+        logging.info(f"DictStorage.delete: Deleting from ID: '{request_id}'.")
         async with self._lock:
-            if id not in self._id_to_result_queue:
-                logging.warning(f"Tried to remove result queue for ID {id}, but it doesn't exist.")
-                raise NotFoundError(f"Result queue for ID {id} not found.")
+            if request_id not in self._id_to_result_queue:
+                logging.warning(f"Tried to remove result queue for ID {request_id}, but it doesn't exist.")
+                raise NotFoundError(f"Result queue for ID {request_id} not found.")
 
-            self._id_to_result_queue.pop(id)
-        logging.info(f"DictStorage.delete: Deleted queue for ID: '{id}'.")
+            self._id_to_result_queue.pop(request_id)
+        logging.info(f"DictStorage.delete: Deleted queue for ID: '{request_id}'.")
 
 
