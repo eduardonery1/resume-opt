@@ -1,6 +1,6 @@
 import React, { useState } from "react"
-import Stepper from "../components/Stepper"
-import "../styles/Optimizer.css"
+import Stepper from "components/stepper"
+import "styles/Optimizer.css"
 
 
 export default function Optimizer(){
