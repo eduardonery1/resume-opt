@@ -1,17 +1,19 @@
-from fastapi import FastAPI, UploadFile, File, status, Response, BackgroundTasks
-from io import BytesIO
-from PyPDF2 import PdfReader
-from dotenv import load_dotenv
-import os
 import asyncio
-import logging
 import json
+import logging
+import os
 import uuid
-from task_api import request_task
+from io import BytesIO
 
+from dotenv import load_dotenv
+from fastapi import (BackgroundTasks, FastAPI, File, HTTPException, Response,
+                     UploadFile, status)
+from PyPDF2 import PdfReader
+
+from .task_api import request_task
 
 load_dotenv()
-user_data = {} # Implement JWT
+user_data = {}  # Implement JWT
 
 if bool(os.getenv('DEBUG')):
     logging.basicConfig(level=logging.DEBUG)
@@ -23,11 +25,13 @@ else:
 
 app = FastAPI()
 
+
 @app.get('/auth')
 def get_auth():
     token = str(uuid.uuid4())
     user_data[token] = []
-    return ({'auth': token}, status.HTTP_200_OK)
+    return {'auth': token}, status.HTTP_200_OK
+
 
 def valid_resume(text: str) -> bool:
     # For prototyping only, isn't reliable in PROD
@@ -39,27 +43,31 @@ def valid_resume(text: str) -> bool:
             count += 1
     return count / len(keywords) > 0.5
 
+
 @app.post('/resume')
-async def post_resume(token: str, resume: UploadFile=File(...)):
+async def post_resume(token: str, resume: UploadFile = File(...)):
     if token not in user_data:
-        return {'error': 'Invalid token.'}, status.HTTP_400_BAD_REQUEST
+        raise HTTPException(status=status.HTTP_403_FORBIDDEN,
+                            detail='Invalid token.')
 
     try:
         contents = await resume.read()
         reader = PdfReader(BytesIO(contents))
     except IOError as e:
-        return {'error': 'Invalid PDF File.'}, status.HTTP_400_BAD_REQUEST
+        raise HTTPException(status=status.HTTP_400_BAD_REQUEST,
+                            detail='Invalid PDF file.')
 
     pages = [page.extract_text() for page in reader.pages]
     text = ''.join(pages)
     if not valid_resume(text):
-        return {"text": "Invalid resume pdf."}, status.HTTP_400_BAD_REQUEST
-    
+        raise HTTPException(
+            status=status.HTTP_400_BAD_REQUEST, detail='Not a resume.')
+
     request = {
-        "auth": token, 
+        "auth": token,
         "task_name": "resume-optimization",
-        "payload":{ 
-            "text": text 
+        "payload": {
+            "text": text
         }
     }
 
@@ -68,4 +76,4 @@ async def post_resume(token: str, resume: UploadFile=File(...)):
 
 if __name__ == '__main__':
     import uvicorn
-    uvicorn.run(app, host='0.0.0.0', port=8000)
+    uvicorn.run(app, host='0.0.0.0', port=8000, reload=True)

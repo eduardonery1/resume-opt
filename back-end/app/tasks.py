@@ -1,15 +1,19 @@
 import json
 import logging
+from abc import ABC, abstractmethod
+from typing import Any, Dict, List
+
 from pydantic import BaseModel, ValidationError
-from abc import abstractmethod, ABC
-from typing import Dict, List, Any
-from task_executors import TaskExecutor, Gemini
+
+from .task_executors import Gemini, TaskExecutor
 
 logging.basicConfig(level=logging.INFO)
+
+
 class Task(BaseModel, ABC):
     prompt: str
     payload: Dict
-    
+
     @abstractmethod
     def to_prompt(self) -> str:
         """ Abstract method to generate the prompt string from the task parameters. """
@@ -30,11 +34,11 @@ class TaskResponse(BaseModel):
 
 class DummyTask(Task):
     prompt: str = "This is a dummy task. {param1}."
-    payload: Dict 
-    
+    payload: Dict
+
     def to_prompt(self) -> str:
         return self.prompt.format(
-            param1=self.payload["param1"], 
+            param1=self.payload["param1"],
         )
 
 
@@ -46,11 +50,11 @@ class ResumeOptimizationTask(Task):
     payload: Dict[str, Any]
 
     def to_prompt(self) -> str:
-        return self.prompt.format(text=self.payload["text"]) 
+        return self.prompt.format(text=self.payload["text"])
 
 
 class TaskManager:
-    taskcode_to_task = {"test-task": DummyTask, 
+    taskcode_to_task = {"test-task": DummyTask,
                         "resume-optimization": ResumeOptimizationTask}
 
     def __init__(self):
@@ -62,16 +66,18 @@ class TaskManager:
             task_class = self.taskcode_to_task.get(task_request.task_name)
             if task_class is None:
                 raise ValueError(f"Task {task_request.task_name} not found.")
-            
+
             ex = next(filter(lambda ex: ex.is_available(), self._executors), None)
             if not ex:
                 raise ValueError("No available executors")
             logging.info("Found ex.")
 
-            task = task_class(payload=task_request.payload)  # Initialize the task with the payload
+            # Initialize the task with the payload
+            task = task_class(payload=task_request.payload)
             logging.info("Running Executor...")
             processed_payload = ex.run_task(task)
-            response = TaskResponse(id=task_request.id, payload={"response": processed_payload})
+            response = TaskResponse(id=task_request.id, payload={
+                                    "response": processed_payload})
             return response
         except ValidationError as e:
             logging.error(f"Validation error: {e}")
@@ -83,11 +89,12 @@ class TaskManager:
             logging.exception(f"An unexpected error occurred: {e}")
             raise
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     tm = TaskManager()
     payload = {"param1": "text"}
     res = tm.process_task(
-        TaskRequest(id="test", auth="test", task_name="test-task", payload=payload)
+        TaskRequest(id="test", auth="test",
+                    task_name="test-task", payload=payload)
     )
     print(res)
-

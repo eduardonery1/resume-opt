@@ -2,17 +2,20 @@ import asyncio
 import logging
 import uuid
 from asyncio import QueueFull
-from storages import DictStorage, TaskResponseStorage
-from tasks import TaskRequest, TaskResponse
+from functools import partial
+from threading import Lock
+from typing import Any, Dict
+
 from dependency_injector import containers, providers
 from dependency_injector.wiring import Provide, inject
 from pydantic import ValidationError
-from typing import Dict, Any
-from exceptions import UnableToFetchResultError, InvalidTaskName, UnableToPublishTask
-from task_queue import GooglePubSubTaskPublisher
-from functools import partial
-from utils import exp_backoff
-from threading import Lock
+
+from .exceptions import (InvalidTaskName, UnableToFetchResultError,
+                         UnableToPublishTask)
+from .storages import DictStorage, TaskResponseStorage
+from .task_queue import GooglePubSubTaskPublisher
+from .tasks import TaskRequest, TaskResponse
+from .utils import exp_backoff
 
 
 class Container(containers.DeclarativeContainer):
@@ -20,10 +23,11 @@ class Container(containers.DeclarativeContainer):
     queue = providers.ThreadSafeSingleton(GooglePubSubTaskPublisher)
     result_storage = providers.ThreadSafeSingleton(DictStorage)
 
+
 @inject
-async def request_task(request: Dict, 
-                       storage = Provide[Container.result_storage], 
-                       queue = Provide[Container.queue], 
+async def request_task(request: Dict,
+                       storage=Provide[Container.result_storage],
+                       queue=Provide[Container.queue],
                        timeout: float = 5, tries: int = 5) -> Dict:
     """ Requests a task from the queue and waits for the result.
 
@@ -50,9 +54,10 @@ async def request_task(request: Dict,
         raise TypeError("Request must be a dictionary.")
 
     if not isinstance(storage, TaskResponseStorage):
-        raise TypeError("'storage' paramenter must be derived from 'TaskResponseStorage' class.")
+        raise TypeError(
+            "'storage' paramenter must be derived from 'TaskResponseStorage' class.")
 
-    request_id = str(uuid.uuid4()) 
+    request_id = str(uuid.uuid4())
     request.update({"id": request_id})
 
     try:
@@ -69,18 +74,20 @@ async def request_task(request: Dict,
 
     await storage.create(request_id)
 
-    try: 
+    try:
         await queue.publish_task(request_obj, storage)
     except UnableToPublishTask as e:
-        logging.exception(f"Unable to publish task. Auth: {auth}, Request ID: {request_id}")
+        logging.exception(
+            f"Unable to publish task. Auth: {auth}, Request ID: {request_id}")
         raise e
-    
+
     else:
         try:
             result = await storage.read(request_id)
             logging.info("Request sucessfully handled.")
         except Exception as e:
-            raise UnableToFetchResultError("After several tries the system was unable to fetch results.", str(e))
+            raise UnableToFetchResultError(
+                "After several tries the system was unable to fetch results.", str(e))
 
     finally:
         try:
@@ -95,7 +102,7 @@ async def request_task(request: Dict,
 container = Container()
 container.wire(modules=[__name__])
 
-if __name__=="__main__":
+if __name__ == "__main__":
     import sys
     import time
     logging.basicConfig(level=logging.INFO)
@@ -107,7 +114,7 @@ if __name__=="__main__":
                 "task_name": "test-task",
                 "payload": {"param1": str(i)}
             }
-            #logging.info(f"Requesting {i}...")
+            # logging.info(f"Requesting {i}...")
             result = await request_task(request)
             print(f"Task result: {result}")
 
@@ -118,7 +125,7 @@ if __name__=="__main__":
         except Exception as e:
             logging.exception(f"An unexpected error occurred: {e}")
             sys.exit(1)
-    
+
     async def main():
         loop = asyncio.get_running_loop()
         for n in [100]:
@@ -126,7 +133,7 @@ if __name__=="__main__":
             start = time.time()
             await asyncio.gather(*tasks)
             end = time.time()
-            print(f"Total time taken {n} requests: {end - start:.4f} seconds. AVG time per req: {(end - start) / n:.6f} seconds")
+            print(
+                f"Total time taken {n} requests: {end - start:.4f} seconds. AVG time per req: {(end - start) / n:.6f} seconds")
 
     asyncio.run(main())
-        
