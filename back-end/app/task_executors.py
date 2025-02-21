@@ -1,11 +1,12 @@
-from abc import ABC, abstractmethod
-from dotenv import load_dotenv
-import google.generativeai as genai
 import logging
 import os
+from abc import ABC, abstractmethod
 
+import google.generativeai as genai
+from dotenv import load_dotenv
 
 load_dotenv()
+
 
 class TaskExecutor(ABC):
     @abstractmethod
@@ -21,7 +22,7 @@ class Gemini(TaskExecutor):
     def __init__(self):
         genai.configure(api_key=os.environ["GEMINI_API_KEY"])
         self.model = genai.GenerativeModel("gemini-1.5-flash")
-    
+
     def is_available(self) -> bool:
         return True
 

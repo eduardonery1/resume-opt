@@ -1,20 +1,22 @@
+import asyncio
+import functools
+import logging
+import os
+import threading
 from abc import ABC, abstractmethod
-from typing import Callable, Dict, Tuple, Set
-from google.cloud.pubsub_v1 import PublisherClient, SubscriberClient
-from google.cloud.pubsub_v1.subscriber.message import Message
-from tasks import TaskRequest, TaskResponse, TaskManager
-from dotenv import load_dotenv
-from utils import exp_backoff, exp_sleep
-from exceptions import UnableToPublishTask
-from storages import TaskResponseStorage
 from asyncio import AbstractEventLoop
+from typing import Callable, Dict, Set, Tuple
+
 from dependency_injector import containers, providers
 from dependency_injector.wiring import Provide, inject
-import functools
-import threading
-import os
-import asyncio
-import logging
+from dotenv import load_dotenv
+from google.cloud.pubsub_v1 import PublisherClient, SubscriberClient
+from google.cloud.pubsub_v1.subscriber.message import Message
+
+from .exceptions import InvalidTaskName, UnableToPublishTask
+from .storages import TaskResponseStorage
+from .tasks import TaskManager, TaskRequest, TaskResponse
+from .utils import exp_backoff, exp_sleep
 
 load_dotenv()
 
@@ -35,8 +37,8 @@ class TaskQueuePublisher(ABC):
 
     @abstractmethod
     def publish_task(
-        message: str, 
-        storage: TaskResponseStorage, 
+        message: str,
+        storage: TaskResponseStorage,
         *args, **kwargs
     ):
         raise NotImplementedError
@@ -44,10 +46,12 @@ class TaskQueuePublisher(ABC):
 
 class GooglePubSubTopicManager:
     """ Manages Google Pub/Sub topics and subscriptions for tasks. """
+
     def __init__(self) -> None:
         self.task_name_to_topic_sub_pair: Dict[str, Tuple[str, str]] = {
-                "test-task": ("test-topic", "test-sub")
-        } # Prototype for development
+            "test-task": ("test-topic", "test-sub"),
+            "resume-optimization": ("test-topic", "test-sub")
+        }  # Prototype for development
 
     def get_topic_sub_pair(self, task_name: str) -> Tuple[str, str]:
         """Retrieves the topic and subscription pair for a given task name."""
@@ -59,27 +63,28 @@ class GooglePubSubTopicManager:
 
 class GooglePubSubRequestCallback:
     """ Handles callbacks from Google Pub/Sub subscriptions. """
+
     def __init__(
-            self, 
-            loop: AbstractEventLoop, 
-            task_manager: TaskManager
-        ) -> None:
+        self,
+        loop: AbstractEventLoop,
+        task_manager: TaskManager
+    ) -> None:
 
         self._id_to_storage_lock = asyncio.Lock()
         self._id_to_storage = {}
 
         self._futures_lock = threading.Lock()
         self._futures = {}
-        
+
         self._task_manager = task_manager
         if not loop:
             self._loop = asyncio.get_running_loop()
 
     async def set_storage_to_id(
-            self, 
-            storage: TaskResponseStorage, 
-            request_id: str
-        ) -> None:
+        self,
+        storage: TaskResponseStorage,
+        request_id: str
+    ) -> None:
 
         if not isinstance(request_id, str):
             raise TypeError("Parameter 'id' must be of type str.")
@@ -94,9 +99,9 @@ class GooglePubSubRequestCallback:
         logging.info(f"Successfully associated storage with ID: {request_id}.")
 
     async def _execute_task(
-        self, 
-        request_id: str, 
-        request: TaskRequest, 
+        self,
+        request_id: str,
+        request: TaskRequest,
         message: Message
     ) -> None:
         logging.debug(
@@ -114,21 +119,23 @@ class GooglePubSubRequestCallback:
 
         if storage is None:
             logging.warning(f"No storage found for ID: {request_id}.")
-            message.ack() # Try again later
+            message.ack()  # Try again later
             return
-        
+
         logging.info(f"Processing request {request_id}...")
-        result = self._task_manager.process_task(request) 
+        result = self._task_manager.process_task(request)
         logging.info(f"Task {request_id} result: {result.model_dump_json()}.")
-        
+
         try:
             logging.info(f"Updating storage for ID: {request_id}.")
             await storage.update(request_id, result.model_dump_json())
         except RedundantResponseError:
-            logging.exception(f"Redundant response received for ID: {request_id}.")
+            logging.exception(
+                f"Redundant response received for ID: {request_id}.")
             message.ack()
         except Exception as e:
-            logging.exception(f"{self.__class__.__name__}._update_storage: Error updating storage for ID: {request_id}: {e}")
+            logging.exception(
+                f"{self.__class__.__name__}._update_storage: Error updating storage for ID: {request_id}: {e}")
             message.ack()
         else:
             message.ack()
@@ -142,14 +149,14 @@ class GooglePubSubRequestCallback:
         logging.info(f"Callback received message: {message.data}.")
 
         try:
-            request = TaskRequest.model_validate_json(message.data) 
+            request = TaskRequest.model_validate_json(message.data)
         except ValidationError:
             logging.exception(f"Invalid TaskRequest format: {message.data}")
-            message.ack() 
+            message.ack()
             return
 
         future = asyncio.run_coroutine_threadsafe(
-            self._execute_task(request.id, request, message), 
+            self._execute_task(request.id, request, message),
             loop=self._loop
         )
 
@@ -157,7 +164,7 @@ class GooglePubSubRequestCallback:
             self._futures[request.id] = future
 
         future.add_done_callback(
-            functools.partial(self._cleanup_future, request_id = request.id)
+            functools.partial(self._cleanup_future, request_id=request.id)
         )
 
 
@@ -174,11 +181,13 @@ class GooglePubSub(TaskQueue):
         self._pub_pool = {}
 
         self._lock_consumer_pool = threading.Lock()
-        self._consumer_pool = {} # One consumer per subscription.  There is a low fixed amount of consumers.
+        # One consumer per subscription.  There is a low fixed amount of consumers.
+        self._consumer_pool = {}
 
     def _cleanup_pub_future(self, message, key, topic):
         with self._lock_pub_pool:
-            future = self._pub_pool.get(key) # This will always return a future 
+            # This will always return a future
+            future = self._pub_pool.get(key)
 
         try:
             message_id = future.result()
@@ -197,29 +206,32 @@ class GooglePubSub(TaskQueue):
         with self._lock_consumer_pool:
             self._consumer_pool.pop(key)
         logging.info(f"Subscription '{key}' was successfully cancelled.")
- 
-    def publish(self, message: str, topic: str, request_id: str, tries = 3) -> None:
+
+    def publish(self, message: str, topic: str, request_id: str, tries=3) -> None:
         topic_name = 'projects/{project}/topics/{topic}'.format(
             project=self._project,
-            topic=topic,  
+            topic=topic,
         )
-        
-        future = self._pub_client.publish(topic_name, message.encode('utf-8')) # This has internal retries and timeout
-        logging.info(f"Message with ID: {request_id} was sent to topic: '{topic}'.")
+
+        future = self._pub_client.publish(topic_name, message.encode(
+            'utf-8'))  # This has internal retries and timeout
+        logging.info(
+            f"Message with ID: {request_id} was sent to topic: '{topic}'.")
 
         with self._lock_pub_pool:
             self._pub_pool[request_id] = future
 
         future.add_done_callback(
-                functools.partial(self._cleanup_pub_future, key = request_id, topic = topic))
+            functools.partial(self._cleanup_pub_future, key=request_id, topic=topic))
 
     def consume(self, subscription: str, callback: Callable) -> None:
-        with self._lock_consumer_pool: 
-            if subscription in self._consumer_pool: # One kind of task has a specific consumer running, there is a low fixed amount of consumers.
+        with self._lock_consumer_pool:
+            # One kind of task has a specific consumer running, there is a low fixed amount of consumers.
+            if subscription in self._consumer_pool:
                 logging.info(
                     f"This subscription {subscription} is already being listened to."
-                ) 
-                return 
+                )
+                return
 
         logging.info(f"Consuming from '{subscription}'...")
         subscription_name = 'projects/{project}/subscriptions/{sub}'.format(
@@ -227,25 +239,28 @@ class GooglePubSub(TaskQueue):
             sub=subscription
         )
 
-        future = self._consumer_client.subscribe(subscription_name, callback) # This runs on a separate thread
+        future = self._consumer_client.subscribe(
+            subscription_name, callback)  # This runs on a separate thread
 
         with self._lock_consumer_pool:
             self._consumer_pool[subscription] = future
 
         future.add_done_callback(
-            functools.partial(self._cleanup_sub_future, key = subscription)
-        ) # As the callback removes the future from _consumer_pool, guarantee it's there first.
+            functools.partial(self._cleanup_sub_future, key=subscription)
+            # As the callback removes the future from _consumer_pool, guarantee it's there first.
+        )
 
-        logging.info(f"Listening to messages of subscription: '{subscription}'.")
+        logging.info(
+            f"Listening to messages of subscription: '{subscription}'.")
 
 
 class Container(containers.DeclarativeContainer):
     queue = providers.ThreadSafeSingleton(
-        GooglePubSub, 
+        GooglePubSub,
         project=os.getenv("GOOGLE_CLOUD_PROJECT")
     )
     callback = providers.ThreadSafeSingleton(
-        GooglePubSubRequestCallback, 
+        GooglePubSubRequestCallback,
         loop=None,
         task_manager=TaskManager()
     )
@@ -253,27 +268,29 @@ class Container(containers.DeclarativeContainer):
         GooglePubSubTopicManager
     )
 
+
 @inject
 class GooglePubSubTaskPublisher(TaskQueuePublisher):
     """ Class responsible for requesting tasks using Google Pub/Sub as a message queue. """
+
     def __init__(
-        self, 
-        queue: GooglePubSub = Provide[Container.queue], 
-        topic_manager: GooglePubSubTopicManager = Provide[Container.topic_manager], 
+        self,
+        queue: GooglePubSub = Provide[Container.queue],
+        topic_manager: GooglePubSubTopicManager = Provide[Container.topic_manager],
         callback: GooglePubSubRequestCallback = Provide[Container.callback],
     ) -> None:
-        
+
         if not (queue or topic_manager or callback):
             raise ValueError(
                 "All arguments must be provided correctly."
             )
 
-        super().__init__(queue) 
+        super().__init__(queue)
         self._topic_manager = topic_manager
         self._callback = callback
 
     async def publish_task(
-        self, 
+        self,
         message: TaskRequest,
         storage: TaskResponseStorage
     ) -> None:
@@ -322,4 +339,3 @@ class GooglePubSubTaskPublisher(TaskQueuePublisher):
 
 cont = Container()
 cont.wire(modules=[__name__])
-
