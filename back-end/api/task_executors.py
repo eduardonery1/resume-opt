@@ -7,7 +7,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-
 class TaskExecutor(ABC):
     @abstractmethod
     def is_available():
@@ -20,7 +19,10 @@ class TaskExecutor(ABC):
 
 class Gemini(TaskExecutor):
     def __init__(self):
-        genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+        if not os.getenv('GEMINI_API_KEY') and not os.getenv('DEBUG'):
+            raise Exception("GEMINI_API_KEY not found in environment variables.")
+        api_key = os.getenv('GEMINI_API_KEY')
+        genai.configure(api_key=api_key)
         self.model = genai.GenerativeModel("gemini-1.5-flash")
 
     def is_available(self) -> bool:
