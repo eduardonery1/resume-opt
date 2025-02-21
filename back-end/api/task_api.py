@@ -30,7 +30,6 @@ async def request_task(request: Dict,
                        queue=Provide[Container.queue],
                        timeout: float = 5, tries: int = 5) -> Dict:
     """ Requests a task from the queue and waits for the result.
-
     Args:
         request: A dictionary containing the task request.  Must include 'auth' and 'task_name' keys.
         storage: The ResultStorage instance to use.  Injected via dependency injection.
