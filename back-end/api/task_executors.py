@@ -22,6 +22,7 @@ class Gemini(TaskExecutor):
         if not os.getenv('GEMINI_API_KEY') and not os.getenv('DEBUG'):
             raise Exception("GEMINI_API_KEY not found in environment variables.")
         api_key = os.getenv('GEMINI_API_KEY')
+
         genai.configure(api_key=api_key)
         self.model = genai.GenerativeModel("gemini-1.5-flash")
 
