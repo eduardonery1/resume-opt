@@ -10,9 +10,10 @@ from fastapi import (BackgroundTasks, FastAPI, File, HTTPException, Response,
                      UploadFile, status)
 from PyPDF2 import PdfReader
 
-from .task_api import request_task
+from api.task_api import request_task
 
 load_dotenv()
+
 user_data = {}  # Implement JWT
 
 if bool(os.getenv('DEBUG')):
@@ -30,7 +31,7 @@ app = FastAPI()
 def get_auth():
     token = str(uuid.uuid4())
     user_data[token] = []
-    return {'auth': token}, status.HTTP_200_OK
+    return {'auth': token}
 
 
 def valid_resume(text: str) -> bool:
@@ -74,6 +75,3 @@ async def post_resume(token: str, resume: UploadFile = File(...)):
     res = await request_task(request)
     return res
 
-if __name__ == '__main__':
-    import uvicorn
-    uvicorn.run(app, host='0.0.0.0', port=8000, reload=True)

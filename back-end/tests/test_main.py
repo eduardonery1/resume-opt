@@ -5,7 +5,7 @@ import uuid
 from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 
-from app.main import app
+from api.main import app
 
 load_dotenv()
 
@@ -19,7 +19,7 @@ class MyTestCase(unittest.TestCase):
         response = self.client.get("/auth")
         self.assertEqual(response.status_code, 200)
 
-        token = response.json()[0]["auth"]
+        token = response.json()["auth"]
         self.assertIsInstance(uuid.UUID(token, version=4), uuid.UUID)
 
 

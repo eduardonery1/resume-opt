@@ -13,10 +13,10 @@ from dotenv import load_dotenv
 from google.cloud.pubsub_v1 import PublisherClient, SubscriberClient
 from google.cloud.pubsub_v1.subscriber.message import Message
 
-from .exceptions import InvalidTaskName, UnableToPublishTask
-from .storages import TaskResponseStorage
-from .tasks import TaskManager, TaskRequest, TaskResponse
-from .utils import exp_backoff, exp_sleep
+from api.exceptions import InvalidTaskName, UnableToPublishTask
+from api.storages import TaskResponseStorage
+from api.tasks import TaskManager, TaskRequest, TaskResponse
+from api.utils import exp_backoff, exp_sleep
 
 load_dotenv()
 

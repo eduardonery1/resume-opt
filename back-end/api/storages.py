@@ -8,8 +8,8 @@ from typing import Optional
 from dotenv import load_dotenv
 from pydantic import ValidationError
 
-from .tasks import TaskResponse
-from .utils import RetryError, exp_backoff
+from api.tasks import TaskResponse
+from api.utils import RetryError, exp_backoff
 
 load_dotenv()
 

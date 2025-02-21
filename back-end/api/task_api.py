@@ -10,12 +10,12 @@ from dependency_injector import containers, providers
 from dependency_injector.wiring import Provide, inject
 from pydantic import ValidationError
 
-from .exceptions import (InvalidTaskName, UnableToFetchResultError,
+from api.exceptions import (InvalidTaskName, UnableToFetchResultError,
                          UnableToPublishTask)
-from .storages import DictStorage, TaskResponseStorage
-from .task_queue import GooglePubSubTaskPublisher
-from .tasks import TaskRequest, TaskResponse
-from .utils import exp_backoff
+from api.storages import DictStorage, TaskResponseStorage
+from api.task_queue import GooglePubSubTaskPublisher
+from api.tasks import TaskRequest, TaskResponse
+from api.utils import exp_backoff
 
 
 class Container(containers.DeclarativeContainer):

@@ -5,7 +5,7 @@ from typing import Any, Dict, List
 
 from pydantic import BaseModel, ValidationError
 
-from .task_executors import Gemini, TaskExecutor
+from api.task_executors import Gemini, TaskExecutor
 
 logging.basicConfig(level=logging.INFO)
 
