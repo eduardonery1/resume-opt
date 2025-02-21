@@ -38,5 +38,6 @@ jobs:
       env:
         PYTHONPATH: ${{ github.workspace }}/back-end  # Root path for imports
         DEBUG_TOKEN: "test-token"  # Example environment variable
+        DEBUG: True
       run: |
         python -m unittest discover -s tests -v -t ../back-end
