@@ -5,7 +5,7 @@ from google.cloud.pubsub_v1.subscriber.message import Message
 from tasks import TaskRequest, TaskResponse, TaskManager
 from dotenv import load_dotenv
 from utils import exp_backoff, exp_sleep
-from exceptions import UnableToPublishTask
+from exceptions import UnableToPublishTask, InvalidTaskName
 from storages import TaskResponseStorage
 from asyncio import AbstractEventLoop
 from dependency_injector import containers, providers
@@ -46,7 +46,8 @@ class GooglePubSubTopicManager:
     """ Manages Google Pub/Sub topics and subscriptions for tasks. """
     def __init__(self) -> None:
         self.task_name_to_topic_sub_pair: Dict[str, Tuple[str, str]] = {
-                "test-task": ("test-topic", "test-sub")
+                "test-task": ("test-topic", "test-sub"),
+                "resume-optimization": ("test-topic", "test-sub")
         } # Prototype for development
 
     def get_topic_sub_pair(self, task_name: str) -> Tuple[str, str]:

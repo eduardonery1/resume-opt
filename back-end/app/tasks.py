@@ -38,8 +38,20 @@ class DummyTask(Task):
         )
 
 
+class ResumeOptimizationTask(Task):
+    prompt: str = "Optimize this resume:\n{text}.\n\
+            Organize this resume text extracted from a pdf file into logical sections such as Education, Experience, Contact Information, etc.\
+            Improve all resposabilities descriptions using metrics, correcting grammar and mantaining a professional tone without making the text much larger.\
+            Generate a description that sells a reliable, proactive, and hardworking professional."
+    payload: Dict[str, Any]
+
+    def to_prompt(self) -> str:
+        return self.prompt.format(text=self.payload["text"]) 
+
+
 class TaskManager:
-    taskcode_to_task = {"test-task": DummyTask}
+    taskcode_to_task = {"test-task": DummyTask, 
+                        "resume-optimization": ResumeOptimizationTask}
 
     def __init__(self):
         self._executors = [Gemini()]

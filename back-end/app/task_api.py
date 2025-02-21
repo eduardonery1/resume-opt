@@ -92,12 +92,13 @@ async def request_task(request: Dict,
     return result
 
 
+container = Container()
+container.wire(modules=[__name__])
+
 if __name__=="__main__":
     import sys
     import time
     logging.basicConfig(level=logging.INFO)
-    container = Container()
-    container.wire(modules=[__name__])
 
     async def single_request(i):
         try:

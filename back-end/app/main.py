@@ -52,11 +52,12 @@ async def post_resume(token: str, resume: UploadFile=File(...)):
 
     pages = [page.extract_text() for page in reader.pages]
     text = ''.join(pages)
-    if not valid_resume(test):
+    if not valid_resume(text):
         return {"text": "Invalid resume pdf."}, status.HTTP_400_BAD_REQUEST
     
     request = {
         "auth": token, 
+        "task_name": "resume-optimization",
         "payload":{ 
             "text": text 
         }
