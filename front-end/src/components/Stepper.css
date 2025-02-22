@@ -1,0 +1,58 @@
+.stepper {
+    width: 80%;
+    height: 8rem;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    gap:1rem;
+    padding: 2rem;
+
+}
+
+.step {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+
+}
+
+.stepNumber {
+    height: 2rem;
+    aspect-ratio: 1/1;
+    background-color: var(--color-five);
+    color: var(--color-three);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+    font-weight: 900;
+}
+
+.currStepNumber {
+    color: var(--color-three);
+    background-color: var(--color-four);
+    
+}
+
+.stepText {
+    color:var(--color-five);
+    font-size: 1.4rem;
+    font-weight: 600;
+}
+
+.currStepText {
+    color: var(--color-four);
+}
+
+.stepSpacer {
+    flex:1;
+    height: 0.2rem;
+    border-radius: 100px;
+    background-color: var(--color-five);
+}
+
+.stepSpacerDone {
+    background-color: var(--color-four);
+}
+
