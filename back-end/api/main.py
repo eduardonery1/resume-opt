@@ -8,6 +8,7 @@ from io import BytesIO
 from dotenv import load_dotenv
 from fastapi import (BackgroundTasks, FastAPI, File, HTTPException, Response,
                      UploadFile, status)
+from fastapi.middleware.cors import CORSMiddleware
 from PyPDF2 import PdfReader
 
 from api.task_api import request_task
@@ -17,15 +18,24 @@ load_dotenv()
 user_data = {}  # Implement JWT
 
 if bool(os.getenv('DEBUG')):
-    logging.basicConfig(level=logging.DEBUG)
+    level = logging.DEBUG
     user_data[os.getenv('DEBUG_TOKEN')] = []
     logging.info('Running on DEBUG mode.')
 else:
-    logging.basicConfig(level=logging.INFO)
+    level = logging.INFO
     logging.info('Running on Production mode.')
+
+logging.basicConfig(level=level)
 
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get('/auth')
 def get_auth():
