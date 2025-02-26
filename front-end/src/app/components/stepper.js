@@ -11,14 +11,14 @@ export default function Stepper({ currStep, steps }) {
         </div>
 
         {index < (stepsArray.length - 1) && (
-          <div className={`h-1 flex-1 rounded-[100px] bg-[var(--stepper)]${(index < currStep) ? "bg-[var(--stepper-curr)]" : ""}`}></div>
+          <div className={`h-1 flex-1 rounded-[100px] bg-[var(--stepper)]${(index < currStep) ? "h-1 flex-1 rounded-[100px] bg-[var(--stepper-curr)]" : ""}`}></div>
         )}
       </div>
     )
   });
 
   return (
-    <div className="w-4/5 h-32 flex justify-around items-center gap-4 p-8">
+    <div className="w-4/5 h-32 grid grid-rows-1 grid-cols-[2fr_2fr_1fr] justify-around items-center gap-4 p-8">
       {stepDivs}
     </div>
   )
