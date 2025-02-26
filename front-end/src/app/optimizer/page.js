@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Stepper from "../components/stepper";
+import JobsResumeInfo from "../components/jobs_resume_info";
 
 export default function Optimizer() {
   const [currStep, setCurrStep] = useState(0);
@@ -10,8 +11,7 @@ export default function Optimizer() {
   return (
     <main className="flex flex-col items-center h-full justify-start">
       <Stepper currStep={currStep} steps={steps} />
-      
-      <div className="w-3/5 min-h-[60vh] shadow-[4px_4px_20px_0px_var(--shadow)]"></div>
+      <JobsResumeInfo/>
       
       <div className="flex justify-between items-center m-4 h-12 w-3/5 gap-12">
         <button className={(currStep > 0) ? "border-none h-full w-1/2 text-xl font-semibold text-[var(--background)] bg-[var(--stepper-curr)] flex-[0.5_0_1]" : "border-none h-full w-1/2 text-xl font-semibold bg-[var(--stepper)] flex-[0.5_0_1] text-[var(--background)]"} onClick={() => {
