@@ -58,21 +58,21 @@ def valid_resume(text: str) -> bool:
 @app.post('/resume')
 async def post_resume(token: str, resume: UploadFile = File(...)):
     if token not in user_data:
-        raise HTTPException(status=status.HTTP_403_FORBIDDEN,
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                             detail='Invalid token.')
 
     try:
         contents = await resume.read()
         reader = PdfReader(BytesIO(contents))
     except IOError as e:
-        raise HTTPException(status=status.HTTP_400_BAD_REQUEST,
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail='Invalid PDF file.')
 
     pages = [page.extract_text() for page in reader.pages]
     text = ''.join(pages)
     if not valid_resume(text):
         raise HTTPException(
-            status=status.HTTP_400_BAD_REQUEST, detail='Not a resume.')
+            status_code=status.HTTP_400_BAD_REQUEST, detail='Not a resume.')
 
     request = {
         "auth": token,
