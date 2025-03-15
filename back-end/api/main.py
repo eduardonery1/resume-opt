@@ -73,6 +73,7 @@ async def post_resume(token: str, resume: UploadFile = File(...)):
     if not valid_resume(text):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail='Not a resume.')
+    return text
 
     request = {
         "auth": token,
