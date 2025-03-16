@@ -2,10 +2,9 @@
 
 import { useState } from 'react';
 
-export default function JobsResumeInfo() {
+export default function JobsResumeInfo({ uploadedFile, setUploadedFile}) {
   const [jobLinks, setJobLinks] = useState(['', '', '']);
   const [dragActive, setDragActive] = useState(false);
-  const [uploadedFile, setUploadedFile] = useState(null);
 
   const handleJobChange = (index, value) => {
     const updatedLinks = [...jobLinks];
