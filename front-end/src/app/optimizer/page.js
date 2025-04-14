@@ -15,9 +15,15 @@ export default function Optimizer() {
         const formData = new FormData();
         formData.append("resume", uploadedFile);
 
+        const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+        const token = process.env.NEXT_PUBLIC_DEV_TOKEN;
+
         try {
-          const response = await fetch("https://clever-kindness-copy-production.up.railway.app/resume?token=nery", {
+          const response = await fetch(apiUrl, {
             method: "POST",
+            headers: {
+              "Authorization": `Bearer ${token}`,
+            },
             body: formData,
           });
 
