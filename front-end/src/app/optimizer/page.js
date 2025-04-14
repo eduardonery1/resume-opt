@@ -4,6 +4,32 @@ import { useState } from "react";
 import Stepper from "../components/stepper";
 import JobsResumeInfo from "../components/jobs_resume_info";
 
+const get_url_token = async () => {
+  try {
+    const response = await fetch(process.env.NEXT_PUBLIC_API_GET_AUTH, { method: "GET" });
+
+    if (!response.ok) {
+      console.error("Erro ao obter o token:", response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    const token = data.auth;
+
+    if (token) {
+      console.log("Token obtained successfully");
+      const request = `${process.env.NEXT_PUBLIC_API_POST_RESUME}?token=${token}`;
+      return request;
+    } else {
+      console.error("Token obtain failed");
+      return null;
+    }
+  } catch (error) {
+    console.error("Error obtaining token:", error);
+    return null;
+  }
+}
+
 export default function Optimizer() {
   const [currStep, setCurrStep] = useState(0);
   const [uploadedFile, setUploadedFile] = useState(null);
@@ -11,19 +37,17 @@ export default function Optimizer() {
 
   const handleNext = async () => {
     if (currStep < steps.length - 1) {
-      if (uploadedFile  && uploadedFile.type === "application/pdf") {
+      if (uploadedFile.type === "application/pdf") {
         const formData = new FormData();
         formData.append("resume", uploadedFile);
 
-        const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-        const token = process.env.NEXT_PUBLIC_DEV_TOKEN;
+        const request = process.env.NODE_ENV == "development" ? 
+          process.env.NEXT_PUBLIC_API_POST_RESUME_DEV_TOKEN : await get_url_token();
 
+        console.log(request);
         try {
-          const response = await fetch(apiUrl, {
+          const response = await fetch(request, {
             method: "POST",
-            headers: {
-              "Authorization": `Bearer ${token}`,
-            },
             body: formData,
           });
 
@@ -32,7 +56,7 @@ export default function Optimizer() {
           } else {
             console.error("File upload failed");
           }
-        } catch (error) {
+        } catch(error) {
           console.error("Error uploading file:", error);
         }
       }
