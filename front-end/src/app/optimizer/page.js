@@ -11,23 +11,23 @@ export default function Optimizer() {
 
   const handleNext = async () => {
     if (currStep < steps.length - 1) {
-      if (uploadedFile) {
+      if (uploadedFile  && uploadedFile.type === "application/pdf") {
         const formData = new FormData();
-        formData.append('resume', uploadedFile);
+        formData.append("resume", uploadedFile);
 
         try {
-          const response = await fetch('https://clever-kindness-copy-production.up.railway.app/resume?token=nery', {
-            method: 'POST',
+          const response = await fetch("https://clever-kindness-copy-production.up.railway.app/resume?token=nery", {
+            method: "POST",
             body: formData,
           });
 
           if (response.ok) {
-            console.log('File uploaded successfully');
+            console.log("File uploaded successfully");
           } else {
-            console.error('File upload failed');
+            console.error("File upload failed");
           }
         } catch (error) {
-          console.error('Error uploading file:', error);
+          console.error("Error uploading file:", error);
         }
       }
 
