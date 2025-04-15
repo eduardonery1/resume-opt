@@ -4,6 +4,7 @@ import logging
 import os
 import uuid
 from io import BytesIO
+from typing import List
 
 from dotenv import load_dotenv
 from fastapi import (BackgroundTasks, FastAPI, File, HTTPException, Response,
@@ -12,6 +13,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from PyPDF2 import PdfReader
 
 from api.task_api import request_task
+
+from extract_jobs_requirements import extract_jobs_requirements
 
 load_dotenv()
 
@@ -86,3 +89,10 @@ async def post_resume(token: str, resume: UploadFile = File(...)):
     res = await request_task(request)
     return res
 
+@app.post('/jobs_links')
+async def post_jobs_links(token: str, urls: List[str]):
+    if token not in user_data:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail='Invalid token.')
+    
+    return extract_jobs_requirements(urls)
