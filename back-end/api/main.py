@@ -14,7 +14,7 @@ from PyPDF2 import PdfReader
 
 from api.task_api import request_task
 
-from extract_jobs_requirements import extract_jobs_requirements
+from api.extract_jobs_requirements import extract_jobs_requirements
 
 load_dotenv()
 
