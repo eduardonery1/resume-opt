@@ -4,6 +4,7 @@ import logging
 import os
 import uuid
 from io import BytesIO
+import boto3
 
 from dotenv import load_dotenv
 from fastapi import (BackgroundTasks, FastAPI, File, HTTPException, Response,
@@ -12,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from PyPDF2 import PdfReader
 
 from api.task_api import request_task
+from api.s3_bucket_upload_file import upload_file
 
 load_dotenv()
 
@@ -67,6 +69,8 @@ async def post_resume(token: str, resume: UploadFile = File(...)):
     except IOError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail='Invalid PDF file.')
+    
+    upload_file(UploadFile, 'resume-opt-resumes')
 
     pages = [page.extract_text() for page in reader.pages]
     text = ''.join(pages)
