@@ -4,7 +4,6 @@ import logging
 import os
 import uuid
 from io import BytesIO
-import boto3
 
 from dotenv import load_dotenv
 from fastapi import (BackgroundTasks, FastAPI, File, HTTPException, Response,
@@ -70,7 +69,7 @@ async def post_resume(token: str, resume: UploadFile = File(...)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail='Invalid PDF file.')
     
-    upload_file(UploadFile, 'resume-opt-resumes')
+    upload_file(UploadFile, os.getenv('BUCKET_NAME'))
 
     pages = [page.extract_text() for page in reader.pages]
     text = ''.join(pages)
